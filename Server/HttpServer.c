@@ -37,35 +37,30 @@
 #define PORT 5555
 #define MAXDATA 1024 
 
-typedef struct {
-    int port;
-    char *mode;
-} appconfig_t;
-
 static appconfig_t defaultConf = {PORT,"hello"};
 
 void parse_option(int argc, char**argv, appconfig_t **conf)
 {
-  if(*conf == NULL){
-    exit(1);
-  }
+    if(*conf == NULL){
+        exit(1);
+    }
     int option;
     while((option = getopt(argc, argv, "ha:p:m:")) != -1){
         switch(option){
             case 'h':
                 printf("Usage: ./hs [-p port] [-m mode]\n");
-		free(*conf);
-		exit(0);
+                free(*conf);
+                exit(0);
                 break;
             case 'p':
-	      (*conf)->port = atoi(optarg);
+                (*conf)->port = atoi(optarg);
                 break;
             case 'm':
-	      (*conf)->mode = optarg;
+                (*conf)->mode = optarg;
                 break;
             case '?':
                 printf("unexpected options.\n");
-		free(*conf);
+                free(*conf);
                 exit(1);
                 break;
         }
@@ -108,24 +103,26 @@ int main(int argc, char **argv)
 
     printf("Starting Server, with Listening to port : %d \n", port);
 
-    while(1){
-        char buf[MAXDATA];
+
+    for(;;){
         struct sockaddr_in caddr;
-        int conn_fd;
         socklen_t len;
+        char buf[MAXDATA];
         char method[MAXDATA];
         char url[MAXDATA];
         char protocol[MAXDATA];
 
         memset(&caddr, 0, sizeof(caddr));
-        len = sizeof(caddr);
         if((conn_fd = accept(listen_fd, (struct sockaddr *)&caddr, &len)) < 0){
             perror("accept");
+            close(conn_fd);
             exit(EXIT_FAILURE);
         }
 
+        len = sizeof(caddr);
         if(recv(conn_fd, buf, sizeof(buf), 0) < 0){
             perror("recv");
+            close(conn_fd);
             exit(EXIT_FAILURE);
         }
 
@@ -134,21 +131,24 @@ int main(int argc, char **argv)
 
         char *header = "HTTP/1.0 200 OK\nContent-type: text/html\n\n";
         send(conn_fd, header, strlen(header), 0);
-        char *hello = NULL;
-        printf("%d",conf->port);
+
+        char *result = NULL;
         if (strcmp(conf->mode,"hello")==0){
-            hello = strdup("Hello World!\n");
+            result = "Hello World!\n";
+            send(conn_fd, result, strlen(result), 0);
         }else if(strcmp(conf->mode,"time") == 0){
-	  char *buf = currentDate(&hello);
-	  hello = (char *)xmalloc(sizeof(char *) * (strlen(buf) + 1));
-	  hello = buf;
+            result = currentDate();
+            send(conn_fd, result, strlen(result), 0);
+        }else{
+            /**
+             * original contents.
+             */
         }
-        send(conn_fd, hello, strlen(hello), 0);
-        free(hello);
         close(conn_fd);
     }
+
     close(listen_fd);
     free(conf);
-    return 0;
+    exit(0);
 }
 

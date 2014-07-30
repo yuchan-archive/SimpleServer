@@ -9,8 +9,14 @@
 #include "util.h"
 
 int listen_fd = 0;
+int conn_fd = 0;
+appconfig_t *conf = NULL;
 
 void log_exit(char *fmt, ...) {
+    if(conf)free(conf);
+    close(listen_fd);
+    close(conn_fd);
+    
     va_list ap;
 
     va_start(ap, fmt);
@@ -31,13 +37,14 @@ void* xmalloc(size_t sz)
 
 void signal_exit(int sig)
 {
-    close(listen_fd);
-    log_exit("exit by signal %d", sig);
+   
+   log_exit("exit by signal %d", sig);
 }
 
 void install_signal_handlers(void)
 {
     trap_signal(SIGINT, signal_exit);
+    trap_signal(SIGTERM, signal_exit);
 }
 
 void trap_signal(int sig, sighandler_t handler)
